@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live Chat</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap');
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0; background: #000; font-family: 'Poppins', sans-serif; color: #fff; height: 100vh; display: flex; justify-content: center; align-items: center;
+      overflow: hidden;
+    }
+    .login-screen, .chat-screen {
+      width: 360px; height: 640px; border-radius: 20px; background: #1a1a1a; box-shadow: 0 0 20px rgba(255,255,255,0.15); display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .login-screen {
+      padding: 30px;
+    }
+    .login-screen h2 {
+      margin-bottom: 30px; font-weight: 600; text-align: center; letter-spacing: 2px; color: #fffc00;
+    }
+    .login-screen label {
+      font-weight: 300; font-size: 14px; margin-bottom: 6px; display: block; color: #ccc;
+    }
+    .login-screen input {
+      width: 100%; padding: 12px 15px; margin-bottom: 20px; border-radius: 30px; border: none; font-size: 16px; outline: none;
+      background: #333; color: #fff;
+      transition: background 0.3s ease;
+    }
+    .login-screen input:focus {
+      background: #444;
+    }
+    .login-screen button {
+      background: #fffc00; color: #000; border: none; border-radius: 30px; padding: 15px; font-weight: 600; cursor: pointer;
+      font-size: 16px; letter-spacing: 1.5px; transition: background 0.3s ease;
+    }
+    .login-screen button:hover {
+      background: #e6e600;
+    }
+    .error-msg {
+      color: #ff4c4c; font-weight: 600; margin-bottom: 12px; text-align: center; min-height: 20px;
+    }
+
+    /* Chat Screen */
+    .chat-header {
+      padding: 20px 20px 10px 20px;
+      background: #222;
+      font-weight: 600;
+      font-size: 20px;
+      letter-spacing: 1.5px;
+      color: #fffc00;
+      text-align: center;
+      user-select: none;
+      position: relative;
+    }
+
+    /* Delete button */
+    #deleteBtn {
+      position: absolute;
+      right: 20px;
+      top: 18px;
+      background: #ff4c4c;
+      border: none;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      display: none;
+      user-select: none;
+      transition: background 0.3s ease;
+    }
+    #deleteBtn:hover {
+      background: #e04343;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 15px 20px;
+      background: #121212;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+    .msg-row {
+      max-width: 70%;
+      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      word-wrap: break-word;
+      user-select: text;
+      cursor: pointer;
+      border-radius: 25px;
+      transition: background 0.3s ease;
+    }
+    .msg-row.me {
+      align-self: flex-end;
+      text-align: right;
+    }
+    .msg-row.selected {
+      background: #fffc00bb;
+    }
+    .msg-bubble {
+      padding: 12px 18px;
+      border-radius: 25px;
+      font-size: 15px;
+      line-height: 1.3;
+      white-space: pre-wrap;
+      box-shadow: 0 0 8px rgba(255,255,255,0.1);
+      user-select: text;
+      pointer-events: none;
+    }
+    .msg-bubble.me {
+      background: #fffc00;
+      color: #000;
+      border-bottom-right-radius: 6px;
+    }
+    .msg-bubble.other {
+      background: #333;
+      color: #ddd;
+      border-bottom-left-radius: 6px;
+    }
+    .msg-meta {
+      font-size: 11px;
+      color: #777;
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .chat-input-area {
+      background: #222;
+      padding: 12px 20px;
+      display: flex;
+      gap: 12px;
+    }
+    .chat-input-area input {
+      flex: 1;
+      padding: 12px 15px;
+      font-size: 16px;
+      border-radius: 25px;
+      border: none;
+      outline: none;
+      background: #333;
+      color: #fff;
+      box-shadow: inset 0 0 5px #000;
+    }
+    .chat-input-area input::placeholder {
+      color: #777;
+    }
+    .chat-input-area button {
+      background: #fffc00;
+      border: none;
+      padding: 0 20px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 16px;
+      color: #000;
+      transition: background 0.3s ease;
+    }
+    .chat-input-area button:hover:not(:disabled) {
+      background: #e6e600;
+    }
+    .chat-input-area button:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div class="login-screen" id="loginScreen">
+    <h2>Live Chat Login</h2>
+    <div class="error-msg" id="loginError"></div>
+    <label for="username">Username</label>
+    <input id="username" type="text" placeholder="Your username" autocomplete="off" />
+    <label for="password">Password</label>
+    <input id="password" type="password" placeholder="Password" autocomplete="off" />
+    <button id="loginBtn">Login</button>
+  </div>
+
+  <!-- Chat Screen -->
+  <div class="chat-screen" id="chatScreen" style="display:none; flex-direction: column;">
+    <div class="chat-header">Live Chat
+      <button id="deleteBtn">Delete</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area">
+      <input id="messageInput" type="text" placeholder="Type a message" autocomplete="off" />
+      <button id="sendBtn" disabled>Send</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+  <script>
+    const ABLY_API_KEY = "VOQpog.EDlRAg:rlTQDbqkffk_GIZI-gX6YGW5yTeSgeAAeQBVYRB-OvU";
+    const PASSWORD = "240216";
+
+    const loginScreen = document.getElementById('loginScreen');
+    const chatScreen = document.getElementById('chatScreen');
+    const loginError = document.getElementById('loginError');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const chatMessages = document.getElementById('chatMessages');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+
+    let ably, channel;
+    let currentUser;
+    let selectedMsgId = null;
+
+    function formatTime(ts) {
+      const d = new Date(ts);
+      let h = d.getHours();
+      const m = d.getMinutes().toString().padStart(2, '0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12;
+      h = h ? h : 12;
+      return `${h}:${m} ${ampm}`;
+    }
+
+    function validateLogin(username, password) {
+      if (!username || !password) {
+        loginError.textContent = "Username and password required.";
+        return false;
+      }
+      if (password !== PASSWORD) {
+        loginError.textContent = "Invalid password.";
+        return false;
+      }
+      loginError.textContent = "";
+      return true;
+    }
+
+    function addMessage(text, user, ts, isMe, msgId) {
+      const row = document.createElement('div');
+      row.classList.add('msg-row');
+      if (isMe) row.classList.add('me');
+      row.dataset.msgId = msgId;
+
+      const bubble = document.createElement('div');
+      bubble.classList.add('msg-bubble');
+      bubble.classList.add(isMe ? 'me' : 'other');
+      bubble.textContent = text;
+
+      const meta = document.createElement('div');
+      meta.classList.add('msg-meta');
+      meta.textContent = `${user} • ${formatTime(ts)}`;
+
+      row.appendChild(bubble);
+      row.appendChild(meta);
+
+      row.addEventListener('click', () => {
+        if (selectedMsgId === msgId) {
+          selectedMsgId = null;
+          row.classList.remove('selected');
+          deleteBtn.style.display = 'none';
+        } else {
+          clearAllSelections();
+          selectedMsgId = msgId;
+          row.classList.add('selected');
+          deleteBtn.style.display = 'inline-block';
+        }
+      });
+
+      chatMessages.appendChild(row);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function clearAllSelections() {
+      const allMsgs = chatMessages.querySelectorAll('.msg-row.selected');
+      allMsgs.forEach(el => el.classList.remove('selected'));
+      selectedMsgId = null;
+      deleteBtn.style.display = 'none';
+    }
+
+    function deleteSelectedMessage() {
+      if (!selectedMsgId) return;
+      const msgElem = chatMessages.querySelector(`.msg-row[data-msg-id="${selectedMsgId}"]`);
+      if (msgElem) {
+        msgElem.remove();
+      }
+      selectedMsgId = null;
+      deleteBtn.style.display = 'none';
+    }
+
+    loginBtn.addEventListener('click', () => {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!validateLogin(username, password)) return;
+
+      currentUser = username;
+      loginScreen.style.display = 'none';
+      chatScreen.style.display = 'flex';
+
+      connectAbly();
+    });
+
+    usernameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') loginBtn.click();
+    });
+    passwordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') loginBtn.click();
+    });
+
+    function connectAbly() {
+      ably = new Ably.Realtime({ key: ABLY_API_KEY });
+      channel = ably.channels.get('secret-chat');
+
+      channel.subscribe('chat-message', (msg) => {
+        const data = msg.data;
+        if (!data || !data.name || !data.text || !data.ts || !data.id) return;
+        addMessage(data.text, data.name, data.ts, data.name === currentUser, data.id);
+      });
+
+      ably.connection.on('connected', () => {
+        addMessage('You are connected.', 'System', Date.now(), false, 'sys-'+Date.now());
+        sendBtn.disabled = false;
+      });
+
+      ably.connection.on('failed', () => {
+        addMessage('Connection failed.', 'System', Date.now(), false, 'sys-'+Date.now());
+        sendBtn.disabled = true;
+      });
+    }
+
+    function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text) return;
+      const msgId = 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      const msg = { name: currentUser, text, ts: Date.now(), id: msgId };
+      channel.publish('chat-message', msg, (err) => {
+        if (err) {
+          addMessage('Message failed to send.', 'System', Date.now(), false, 'sys-'+Date.now());
+        } else {
+          messageInput.value = '';
+          clearAllSelections();
+        }
+      });
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+
+    messageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    deleteBtn.addEventListener('click', () => {
+      deleteSelectedMessage();
+    });
+  </script>
+
+</body>
+</html>
